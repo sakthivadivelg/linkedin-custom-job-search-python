@@ -131,7 +131,7 @@ if __name__ == "__main__":
 
 ```
 
----
+-----------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### 💡 Why this is better:
 
@@ -139,4 +139,180 @@ if __name__ == "__main__":
 * **Clean Links:** I added a `.split('?')[0]` to the links. This removes all the tracking "junk" from the URL, making the links shorter and cleaner.
 * **Interactive:** The "Easy Apply Now" button will open a new tab for each job, so you don't lose your place on your custom dashboard.
 
-**Would you like me to show you how to schedule this script to run automatically every morning at 9:00 AM?**
+
+Using the **`li_at`** cookie is much safer and more reliable than typing your password into a script. This cookie is a "session token" that tells LinkedIn you are already logged in, allowing your script to bypass the login screen and the pesky 2FA (Two-Factor Authentication) codes.
+
+### 🔍 How to find your `li_at` cookie
+
+1. Open Chrome and log in to [LinkedIn.com](https://www.google.com/url?sa=E&source=gmail&q=https://www.linkedin.com).
+2. Right-click anywhere on the page and select **Inspect** (or press `F12`).
+3. Go to the **Application** tab at the top (you might need to click the `>>` arrows to see it).
+4. In the left sidebar, under **Storage**, click on **Cookies** and then select `https://www.linkedin.com`.
+5. In the list that appears, search for the name **`li_at`**.
+6. Copy the long string of text in the **Value** column. **Keep this secret!** It acts like a temporary password.
+
+---
+
+### 🛠️ Updated Python Script (Cookie Version)
+
+Now, we modify the script to inject that cookie into the browser session. This is much faster and less likely to get your account flagged.
+
+```python
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
+# --- CONFIGURATION ---
+LI_AT_COOKIE = "PASTE_YOUR_COOKIE_HERE"  # Replace with your actual li_at value
+SEARCH_URL = "https://www.linkedin.com/jobs/search/?keywords=HTML%20CSS%20Javascript"
+
+def get_jobs_with_cookie():
+    options = Options()
+    # options.add_argument("--headless") # Optional: runs without opening a window
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
+    # 1. Visit LinkedIn first (required to set cookies for the domain)
+    driver.get("https://www.linkedin.com")
+    
+    # 2. Add the session cookie
+    driver.add_cookie({
+        "name": "li_at",
+        "value": LI_AT_COOKIE,
+        "domain": ".www.linkedin.com"
+    })
+    
+    # 3. Refresh or navigate to the jobs page
+    driver.get(SEARCH_URL)
+    time.sleep(5) # Give the page time to load the jobs
+
+    # ... (Insert the same scraping logic from the previous script here) ...
+    
+    print("Successfully bypassed login using cookies!")
+    # driver.quit()
+
+get_jobs_with_cookie()
+
+```
+
+### 💡 Pro-Tips for Your Job Board HTML
+
+Since you want a custom HTML page to browse these jobs, here are two ways to make it better:
+
+* **Filter for "Easy Apply":** You can modify the `SEARCH_URL` to include the Easy Apply filter. On LinkedIn, click the "Easy Apply" button manually once, then copy that new URL into your script.
+* **Auto-Date:** Add a timestamp to your HTML file name (e.g., `jobs_Feb_16.html`) so you can track your search history over time.
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+To build a working automation for LinkedIn, we need to use **Selenium** because LinkedIn's job listings are loaded dynamically with JavaScript.
+
+### 🛠️ Prerequisites
+
+You will need to install the following libraries:
+`pip install selenium webdriver-manager`
+
+---
+
+## 🚀 The Python Automation Script
+
+This script will log in to LinkedIn, search for the keywords, scrape the job links, and generate your HTML file.
+
+```python
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
+
+# --- CONFIGURATION ---
+EMAIL = "your_email@example.com"
+PASSWORD = "your_password"
+SEARCH_QUERY = "https://www.linkedin.com/jobs/search/?keywords=HTML%20CSS%20Javascript"
+
+def get_linkedin_jobs():
+    # Setup Chrome options
+    chrome_options = Options()
+    # chrome_options.add_argument("--headless") # Uncomment to run without opening browser
+    
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    job_results = []
+
+    try:
+        # 1. Login
+        driver.get("https://www.linkedin.com/login")
+        driver.find_element(By.ID, "username").send_keys(EMAIL)
+        driver.find_element(By.ID, "password").send_keys(PASSWORD)
+        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        time.sleep(5) # Wait for login to complete
+
+        # 2. Search Jobs
+        driver.get(SEARCH_QUERY)
+        time.sleep(5)
+
+        # 3. Scrape Job Cards
+        # We look for the job cards and extract Title, Company, and Link
+        cards = driver.find_elements(By.CLASS_NAME, "job-card-container")
+        
+        for card in cards[:10]: # Limit to first 10 for safety
+            try:
+                title_el = card.find_element(By.CLASS_NAME, "job-card-list__title")
+                title = title_el.text
+                link = title_el.get_attribute("href")
+                company = card.find_element(By.CLASS_NAME, "job-card-container__primary-description").text
+                
+                job_results.append({"title": title, "company": company, "link": link})
+            except Exception as e:
+                continue
+
+    finally:
+        driver.quit()
+    
+    return job_results
+
+def save_to_html(jobs):
+    html_template = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: sans-serif; padding: 50px; background: #f4f4f9; }}
+            .job-card {{ background: white; padding: 20px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+            .apply-btn {{ display: inline-block; background: #0073b1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; }}
+        </style>
+    </head>
+    <body>
+        <h1>Latest Frontend Jobs</h1>
+        {''.join([f'<div class="job-card"><h3>{j["title"]}</h3><p>{j["company"]}</p><a class="apply-btn" href="{j["link"]}" target="_blank">Apply on LinkedIn</a></div>' for j in jobs])}
+    </body>
+    </html>
+    """
+    with open("my_job_board.html", "w", encoding="utf-8") as f:
+        f.write(html_template)
+    print("Success! Open 'my_job_board.html' to see your links.")
+
+# Run the process
+scraped_jobs = get_linkedin_jobs()
+if scraped_jobs:
+    save_to_html(scraped_jobs)
+else:
+    print("No jobs found or login failed.")
+
+```
+
+---
+
+## ⚠️ Vital Precautions
+
+LinkedIn's security is world-class. If you use this script, follow these rules to avoid getting your account banned:
+
+1. **Use a "Human" Delay:** LinkedIn detects rapid clicking. Notice the `time.sleep(5)` commands; these are necessary to let the page load and look like a human is browsing.
+2. **Two-Factor Authentication (2FA):** If your account has 2FA, the script will pause at the login screen. You will need to manually enter the code in the browser window before the script continues.
+3. **The "li_at" Method:** Professional scrapers often use the `li_at` cookie instead of email/password to bypass the login screen entirely. This is more stable but slightly more advanced to set up.
+
+---
+
+### How this works for you:
+
+Once you run this, a file named `my_job_board.html` will appear in your folder. When you open it, you’ll have a clean list of jobs with buttons that take you directly to the application page.
+
