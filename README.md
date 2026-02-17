@@ -7,9 +7,10 @@ scraper.py: The actual Python code we discussed (using the li_at cookie).
 
 requirements.txt: A list of the libraries needed to run your code. It should contain:
 
-Plaintext
+<pre>Plaintext
 selenium
 webdriver-manager
+</pre>
 README.md: A guide on how to use it. You should include:
 
 How to find the li_at cookie.
@@ -18,7 +19,7 @@ How to install the requirements.
 
 How to run the script.
 
-4. Visibility & License
+**Visibility & License**
 Visibility: Keep it Public if you want to show this off in your portfolio.
 
 Add .gitignore: Select the Python template. This prevents "junk" files (like __pycache__) from being uploaded to GitHub.
